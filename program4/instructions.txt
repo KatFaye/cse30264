@@ -1,0 +1,64 @@
+Background
+
+In this programing assignment, you will implement the client and server sides of an "online chat room" application. You can choose to use either TCP or UDP in your implementation. In this application, the client determines the operation to be performed: message broadcasting and private messaging. Even though only one port is being used, the server should be able to accept multiple simultaneous client connections. The server should respond appropriately to the specific command send by the client. The specifics of the protocol are detailed in this handout. You are free to reuse part of your programs in the programming assignments 1, 2, and 3 to finish this programming assignment. Note: please refer to appendix A for the port number assigned to your group for the assignment.
+
+For the assignment, you will turn in a gzipped tar file to your dropbox. The gzipped tar file should contain:
+Reasonably commented client code
+Reasonably commented server code
+README documentation
+Type of Messages
+
+In this assignment, we define two types of message frames: 1) data message and 2) command message. A data message is the message exchanged between clients (i.e., the Broadcast and Private messages described in the following online chat room protocol). A command message is the message exchanged between the client and server (e.g., operation, acknowledgement, confirmation messages described below). In your implementation, you can define your own message format to encode the message type. For example, you can use the first character of the message to distinguish between the two types of messages (e.g., "C" for command message and "D" for data message).
+
+Note: In your implementation, the sender is responsible of encoding the type information into the message frame and the receiver is responsible of extracting the type information from the message and performs accordingly. (Refer to Technical Instruction section for more details.)
+Online Chat Room
+
+Server opens a port, creates the TCP/UDP socket, and goes into "wait for connection" state, and actively listens for socket connections. Hint: Please read the Technical Instruction Section below for details
+Client logs into the system by connecting to the server on the appropriate port.
+Client sends username.
+Server checks to see if it is a new user or existing user and requests a password. Note: Store users and their passwords in a file rather than in memory (otherwise the credentials will get lost once the server program is terminated).
+Client sends password.
+Server either registers a new user or checks to see if the password matches. Server then sends acknowledgement to the client. Note: multiple clients should be able to register at the same time.
+Server continues to wait for operation command from a client or a new client connection.
+Client goes into "prompt user for operation" state and prompts user for operation.
+Client passes operation (B: Message Broadcasting, P: Private Messaging, E: Exit) to server.
+Operation is executed as follows:
+B:
+Client sends operation (B) to broadcast a message to all active clients (i.e., the clients who successfully log into the system but has not exited yet).
+Server sends the acknowledgement back to the client to prompt for the message to be sent.
+Client sends the broadcast message to the server.
+Server receives the message and sends that message to all other client connections. Note: The server should keep track of the socket descriptors it has created for each client since the program began running. You can decide how to implement this tracking function.
+Server sends confirmation that the message was sent. Note: You can decide the content/format of the confirmation.
+Client receives and prints the confirmation.
+Client and server return to "prompt user for operation" and "wait for operation from client" state respectively.
+P:
+Client sends operation (P) to leave a message to a specific client.
+Server sends the list of current online users. Note: The server should keep track of the usernames of all online users (i.e., users associated with active clients) since the program began running. You can decide how to implement this tracking function. We assume that any client can go offline by using operation (E).
+Client receives the list of online users from the server.
+Client prompts the user for and sends the username (of the target user) to send a message to.
+Client then prompts for and sends the message to be sent.
+Server receives the above information and checks to make sure the target user exists/online.
+If the target user exists/online, the server forwards the message to the user. The server should do this by sending the message to the corresponding socket descriptor of the target user.
+Server sends confirmation that the message was sent or that the user did not exist. Note: You can decide the content/format of the confirmation.
+Client receives the confirmation from the server and prints it out.
+Client and server return to "prompt user for operation" and "wait for operation from client" state respectively.
+E:
+Client sends operation (E) to close its connection with the server and end the program.
+Server receives the operation and closes the socket descriptor for the client.
+Server updates its tracking record on the socket descriptors of active clients and usernames of online users.
+Client should close socket and return.
+
+Note: If it is not explicitly specified, the client and server will return to "prompt user for operation" and "wait for operation from client" state respectively after a successful operation and wait for the next operation.
+Technical Instructions
+
+Multithread Server: The server must be able to monitor and handle messages from multiple clients simultaneously. This can be done using multithreading. We encourage you to use pthread libriary. Basically, you will need a main thread to listen to all new connections. This can be done using the socket accept function within a while loop. This main thread is just your main program. For each connected client, you will need to create a new thread using pthread_create() method. You can set a threshold (e.g., maxThreadNumber=10) for the total number of threads. A multithreaded server implementation example can be found here.
+
+Multithread Client: The client must also be able to handle concurrent messages from multiple origins (e.g., command messages from the server and data messages from other clients). This should be done using multithreading as well. In particular, each client should have one thread (e.g., thread1) to collect all messages from the socket and another thread (e.g., thread2) to parse and react to those messages. Note that the main program itself is a thread so you only need to create one extra thread. The client will also need to identify the type of the messages it received and perform appropriately based on the application protocol (e.g., if a data message is received, the client simply prints out the message; if a command message is received, the client should continue the interaction with server based on the command message).
+
+Note: When using the (E) command to exit, make sure all threads are properly terminated. Specifically, you should terminate the main thread after the extra thread has finished its job. This can be done by using the pthread_join() method.
+
+To ensure multithreading is working correctly on both client and server, you can perform the following simple tests:
+Try logging/registering with multiple clients with the server at the same time. One client's login process should not block any other clients.
+Reach a state where a server is prompting client 1 to type in some message (e.g., after client 1 sends a (B) command). Then send a private message to client 1 from client 2. Client 1 should first print out the message from client 2 and then return to the prompt state.
+
+Note: A simple test scenario of your implementation: three clients and one server. You can run three clients on three different student machines and run the server on any of the three machines where you run the client or on a fourth student machines. You can then easily test broadcast messaging, private messaging and multithreading in this scenario.
